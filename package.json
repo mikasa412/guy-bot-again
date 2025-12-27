@@ -1,0 +1,25 @@
+{
+  "name": "guy-bot",
+  "version": "0.1.0",
+  "description": "discord bot for reactbot and gambling",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon",
+    "start": "node ./dist/index.js"
+  },
+  "keywords": [
+    "bot"
+  ],
+  "author": "mikasa",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2"
+  }
+}
