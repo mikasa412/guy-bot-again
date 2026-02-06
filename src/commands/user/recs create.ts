@@ -5,8 +5,8 @@ import * as path from "path";
 const reactPath = path.join(__dirname, "../../../config.json");
 
 export const data = new SlashCommandBuilder()
-  .setName("hushreact")
-  .setDescription("high quality reactions (while staying anonymous)");
+  .setName("react")
+  .setDescription("high quality reactions");
 export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
@@ -19,11 +19,6 @@ export async function execute(
   //grab reaction
   const msgindex = Math.floor(Math.random() * serverReactions.length);
   const msgtosend = serverReactions[msgindex] as string;
-  const send = msgtosend.replace(/"/g, '');
 
-  await interaction.channel.send(send);
-  await interaction.reply({
-    content: "yeppers",
-    ephemeral: true
-  });
+  await interaction.reply(msgtosend.replace(/"/g, ''));
 }

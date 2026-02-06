@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel } from "discord.js";
+import { SlashCommandBuilder, Client, GuildMember, EmbedBuilder, ChatInputCommandInteraction, TextChannel } from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -9,13 +9,12 @@ export const data = new SlashCommandBuilder()
   .setDescription("ask the spirits a question")
   .addStringOption(option =>
       option.setName("question")
-          .setDescription("yep.")
-          .setRequired(true);
+          .setDescription("so, uhh..."))
 export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
 ) {
-  const question = interaction.options.getString("question", true);
+  const question = interaction.options.getString("question") ?? "";
   const ballers = [
       "Without a doubt",
       "fuck yea [#100percent](https://hashtag)",
@@ -25,7 +24,7 @@ export async function execute(
       "Outlook good",
       "Signs point to yes",
 
-      "Not sure, ask <@801288893244506162>",
+      "<@801288893244506162> thoughts?",
       "Reply hazy, try again",
       "Ask again later",
       "Better not tell you now",
@@ -43,12 +42,7 @@ export async function execute(
   ]
   //grab reaction
   const msgindex = Math.floor(Math.random() * ballers.length);
-  const msgtosend = serverReactions[msgindex] as string;
+  const msgtosend = ballers[msgindex] as string;
 
-  const embed = new EmbedBuilder()
-      .setDescription("🎱 " + msgtosend)
-
-  await interaction.reply({
-    content: question + "?",
-    embeds: [embed]
+  await interaction.reply((question ? question + "?" : "") + "\n**🎱 " + msgtosend + "**")
 }

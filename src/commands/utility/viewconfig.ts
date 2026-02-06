@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 export const data = new SlashCommandBuilder()
-  .setName("viewconfig")
-  .setDescription("outputs current server config");
+  .setName("usercard")
+  .setDescription("(WIP) will not work");
 
 export async function execute(
   client: Client,
