@@ -1,8 +1,4 @@
 import { SlashCommandBuilder, Client, GuildMember, EmbedBuilder, ChatInputCommandInteraction, TextChannel } from "discord.js";
-import * as fs from "fs";
-import * as path from "path";
-
-const reactPath = path.join(__dirname, "../../../config.json");
 
 export const data = new SlashCommandBuilder()
   .setName("8ball")
