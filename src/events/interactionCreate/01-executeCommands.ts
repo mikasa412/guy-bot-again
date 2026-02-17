@@ -14,7 +14,7 @@ export default async function handleInteraction(
   }
 
   try {
-    console.log(`Executing ${interaction.commandName}`);
+    console.log(`Executing ${interaction.commandName} command for ${interaction.user.tag} in ${interaction.guild?.name || "DMs"}`);
     await command.execute(client, interaction);
   } catch (err) {
     console.error(`[${interaction.commandName}] execution error:`, err);

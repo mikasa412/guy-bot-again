@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel } from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
+import { increment } from "../utility/stats";
 
 const reactPath = path.join(__dirname, "../../../config.json");
 
@@ -20,5 +21,6 @@ export async function execute(
   const msgindex = Math.floor(Math.random() * serverReactions.length);
   const msgtosend = serverReactions[msgindex] as string;
 
+  await increment(interaction.user.id, "reacts");
   await interaction.reply(msgtosend.replace(/"/g, ''));
 }

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, Client, GuildMember, EmbedBuilder, ChatInputCommandInteraction, TextChannel } from "discord.js";
+import { increment } from "../utility/stats";
 
 export const data = new SlashCommandBuilder()
   .setName("8ball")
@@ -40,5 +41,6 @@ export async function execute(
   const msgindex = Math.floor(Math.random() * ballers.length);
   const msgtosend = ballers[msgindex] as string;
 
+  await increment(interaction.user.id, "8balls");
   await interaction.reply((question ? question + "?" : "") + "\n**🎱 " + msgtosend + "**")
 }

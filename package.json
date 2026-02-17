@@ -15,7 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "discord.js": "^14.22.1",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "mariadb": "^3.4.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",

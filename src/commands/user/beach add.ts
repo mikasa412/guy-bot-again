@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel } from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
+import { increment } from "../utility/stats";
 
 const reactPath = path.join(__dirname, "../../../config.json");
 
@@ -32,6 +33,7 @@ export async function execute(
   bottles.push(newBottle);
 
   fs.writeFileSync(reactPath, JSON.stringify(config, null, 2));
+  await increment(interaction.user.id, "bottles_thrown");
   interaction.reply({
     content: "you toss the bottle into the sea...",
     ephemeral: true
