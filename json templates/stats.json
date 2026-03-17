@@ -1,0 +1,12 @@
+{
+    "global": {
+        "total": 0,
+        "reacts": 0,
+        "8balls": 0,
+        "bottles_thrown": 0,
+        "recs_created": 0,
+        "redditcares": 0,
+        "stats_checks": 0,
+        "pings": 0
+    }
+}

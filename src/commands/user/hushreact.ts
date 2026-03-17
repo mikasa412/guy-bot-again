@@ -1,9 +1,9 @@
-import { SlashCommandBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel } from "discord.js";
+import { SlashCommandBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel, MessageFlags } from "discord.js";
 import * as fs from "fs";
 import * as path from "path";
 import { increment } from "../utility/stats";
 
-const reactPath = path.join(__dirname, "../../../config.json");
+const reactPath = path.join(__dirname, "../../../jsons/reactions.json");
 
 export const data = new SlashCommandBuilder()
   .setName("hushreact")
@@ -13,19 +13,18 @@ export async function execute(
   interaction: ChatInputCommandInteraction
 ) {
   //get json & member
-  const config = JSON.parse(fs.readFileSync(reactPath, "utf-8"));
-  const serverReactions = config.reactions;
+  const reactions = JSON.parse(fs.readFileSync(reactPath, "utf-8"));
   const member = interaction.member as GuildMember;
 
   //grab reaction
-  const msgindex = Math.floor(Math.random() * serverReactions.length);
-  const msgtosend = serverReactions[msgindex] as string;
+  const msgindex = Math.floor(Math.random() * reactions.length);
+  const msgtosend = reactions[msgindex] as string;
   const send = msgtosend.replace(/"/g, '');
 
   await increment(interaction.user.id, "reacts");
   await interaction.channel.send(send);
   await interaction.reply({
     content: "yeppers",
-    ephemeral: true
+    flags: MessageFlags.Ephemeral
   });
 }

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, Client, GuildMember, EmbedBuilder, ChatInputCommandInteraction, TextChannel } from "discord.js";
+import { SlashCommandBuilder, Client, GuildMember, ChatInputCommandInteraction } from "discord.js";
 import { increment } from "../utility/stats";
 
 export const data = new SlashCommandBuilder()
