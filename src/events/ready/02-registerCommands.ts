@@ -46,11 +46,11 @@ export default async function registerCommands(client: Client) {
         execute: mod.execute,
       });
       total++;
-      console.log(`✅ Loaded command "${mod.data.name}" from ${group}/${file}`);
+      console.log(`Loaded command "${mod.data.name}" from ${group}/${file}`);
     }
   }
 
-  console.log(`✅ Cached ${total} command(s) in client.commands`);
+  console.log(`- Cached ${total} command(s) in client.commands`);
 
   // bulk overwrite to Discord
   if (!client.application) {
@@ -60,6 +60,6 @@ export default async function registerCommands(client: Client) {
   } else {
     const payload = client.commands.map((cmd) => cmd.data.toJSON());
     await client.application.commands.set(payload);
-    console.log(`🚀 Deployed ${payload.length} slash command(s) to Discord`);
+    console.log(`> Deployed ${payload.length} slash command(s) to Discord`);
   }
 }
