@@ -10,3 +10,8 @@ declare module "discord.js" {
     commands: Collection<string, CommandModule>;
   }
 }
+
+declare module "*.md" {
+  const content: string;
+  export default content;
+}
