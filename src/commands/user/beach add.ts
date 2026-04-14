@@ -32,7 +32,7 @@ export async function execute(
     const message = interaction.options.getString("message", true);
     const hush = interaction.options.getString('hush', false);
 
-    if (blacklist.users.includes(interaction.user.id)) {
+    if (blacklist.blacklist.users.includes(interaction.user.id)) {
         await interaction.reply({
             content: 'you are banned from adding to the beach',
             flags: MessageFlags.Ephemeral
