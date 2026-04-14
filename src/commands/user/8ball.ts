@@ -41,6 +41,6 @@ export async function execute(
   const msgindex = Math.floor(Math.random() * ballers.length);
   const msgtosend = ballers[msgindex] as string;
 
-  await increment(interaction.user.id, "8balls");
+  await increment(interaction.user.id, "8balls", 1, 1);
   await interaction.reply((question ? question + "?" : "") + "\n**🎱 " + msgtosend + "**")
 }

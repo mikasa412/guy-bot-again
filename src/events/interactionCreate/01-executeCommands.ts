@@ -4,12 +4,20 @@ import { reply, reply2, report } from "../../commands/user/beach view";
 import * as fs from "fs";
 import * as path from "path";
 
+const blacklistPath = path.join(__dirname, "../../../jsons/config.json");
+const blacklist = JSON.parse(fs.readFileSync(blacklistPath, "utf-8")).blacklist;
+const bottleban = JSON.parse(fs.readFileSync(blacklistPath, "utf-8")).bottleban;
+const reportban = JSON.parse(fs.readFileSync(blacklistPath, "utf-8")).reportban;
+
 // Execute slash commands
 export default async function handleInteraction(
   client: Client,
   interaction: Interaction
 ) {
+  const logC = await client.channels.fetch(process.env.global_log) as TextChannel;
   if (interaction.isModalSubmit()) { 
+    console.log(`Processing modal submit: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
+    await logC.send(`Processing modal submit: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"} \n full interaction data: \`\`\`${String(interaction)}\`\`\``);
     switch (interaction.customId) {
       case ('recmodal'): 
         await handleModalSubmit(client, interaction);
@@ -26,11 +34,35 @@ export default async function handleInteraction(
   }
 
   if (interaction.isButton()) {
+    console.log(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
+    await logC.send(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
+    if (interaction.customId.startsWith('ban-')) {
+      bottleban.push(interaction.user.id);
+      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+      await interaction.reply({ content: 'user banned from adding bottles', flags: MessageFlags.Ephemeral });
+    }
+    if (interaction.customId.startsWith('report-')) {
+      reportban.push(interaction.user.id);
+      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+      await interaction.reply({ content: 'user banned from reporting bottles', flags: MessageFlags.Ephemeral });
+    }
+    if (interaction.customId.startsWith('blacklist-')) {
+      blacklist.users.push(interaction.user.id);
+      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+      await interaction.reply({ content: 'user banned from bot', flags: MessageFlags.Ephemeral });
+    }
     switch (interaction.customId) {
       case ('beachReply'):
         await reply(interaction);
         break;
       case ('beachReport'):
+        if (reportban.includes(interaction.user.id)) {
+          await interaction.reply({
+            content: 'you are banned from reporting bottles',
+            flags: MessageFlags.Ephemeral
+          });
+          return;
+        }
         await report(interaction.message.embeds[0], client, interaction);
         break;
       default:
@@ -49,9 +81,6 @@ export default async function handleInteraction(
       return;
     }
 
-    const blacklistPath = path.join(__dirname, "../../../jsons/config.json");
-    const blacklist = JSON.parse(fs.readFileSync(blacklistPath, "utf-8")).blacklist;
-
     if (blacklist.users.includes(interaction.user.id)) {
       await interaction.reply({
         content: "[error code 99] blacklisted user",
@@ -67,9 +96,9 @@ export default async function handleInteraction(
     }
 
     try {
-      const logC = await client.channels.fetch(process.env.global_log) as TextChannel;
-      await logC.send(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "DMs or user install"} \n full command data: \`\`\`${String(interaction)}\`\`\``);
-      console.log(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "DMs or user install"}`);
+      
+      await logC.send(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"} \n full command data: \`\`\`${String(interaction)}\`\`\``);
+      console.log(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
       await command.execute(client, interaction);
     } catch (err) {
       console.error(`[${interaction.commandName}] execution error:`, err);

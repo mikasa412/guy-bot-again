@@ -20,6 +20,6 @@ export async function execute(
   const msgindex = Math.floor(Math.random() * reactions.length);
   const msgtosend = reactions[msgindex] as string;
 
-  await increment(interaction.user.id, "reacts");
+  await increment(interaction.user.id, "reacts", 1, 1);
   await interaction.reply(msgtosend.replace(/"/g, ''));
 }

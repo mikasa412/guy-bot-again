@@ -26,7 +26,7 @@ export async function execute(
       });
     } catch (error) {
       await interaction.reply({
-        content: `failed to send message to <@${userId}>. Maybe they don't share a server with the bot or have DMs closed?`
+        content: `failed to send message to <@${userId}>`
       });
     }
   } else if (userId) {

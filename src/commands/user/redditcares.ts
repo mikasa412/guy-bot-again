@@ -14,7 +14,7 @@ export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
 ) {
-  
+  await interaction.deferReply({flags:MessageFlags.Ephemeral});
   
   const user = interaction.options.getUser("user", true);
   const id = user.id;
@@ -41,14 +41,14 @@ export async function execute(
       To stop receiving messages from u/IShowFinance, reply “STOP” to this message. 
       `);
   } catch (error) {
-      await interaction.reply({
+      await interaction.followUp({
         content: `couldn't send the message to ${user.displayName ? user.displayName : user.globalName}`,
         flags: MessageFlags.Ephemeral
       });
       return;
   }
-  await increment(interaction.user.id, "redditcares");
-  interaction.reply({
+  await increment(interaction.user.id, "redditcares", 1, 1);
+  await interaction.followUp({
     content: `sent to ${user.displayName ? user.displayName : user.globalName}`,
     flags: MessageFlags.Ephemeral
   });

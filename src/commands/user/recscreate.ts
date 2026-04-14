@@ -147,7 +147,7 @@ export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
 ) {
-  await increment(interaction.user.id, "recs_created");
+  await increment(interaction.user.id, "recs_created", 1, 1);
   const modal = recModal();
   await interaction.showModal(modal);
 }

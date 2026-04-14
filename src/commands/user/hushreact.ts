@@ -21,7 +21,7 @@ export async function execute(
   const msgtosend = reactions[msgindex] as string;
   const send = msgtosend.replace(/"/g, '');
 
-  await increment(interaction.user.id, "reacts");
+  await increment(interaction.user.id, "reacts", 1, 1);
   await interaction.channel.send(send);
   await interaction.reply({
     content: "yeppers",

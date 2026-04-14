@@ -1,6 +1,6 @@
 {
   "name": "guy-bot",
-  "version": "0.1.0",
+  "version": "0.5.5",
   "description": "discord bot for reactbot and gambling",
   "main": "src/index.js",
   "scripts": {
