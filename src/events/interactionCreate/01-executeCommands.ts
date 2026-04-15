@@ -36,22 +36,22 @@ export default async function handleInteraction(
   if (interaction.isButton()) {
     console.log(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
     await logC.send(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
-    if (interaction.customId.startsWith('ban-')) {
-      bottleban.push(interaction.user.id);
-      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
-      await interaction.reply({ content: 'user banned from adding bottles', flags: MessageFlags.Ephemeral });
-    }
-    if (interaction.customId.startsWith('report-')) {
-      reportban.push(interaction.user.id);
-      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
-      await interaction.reply({ content: 'user banned from reporting bottles', flags: MessageFlags.Ephemeral });
-    }
-    if (interaction.customId.startsWith('blacklist-')) {
-      blacklist.users.push(interaction.user.id);
-      fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
-      await interaction.reply({ content: 'user banned from bot', flags: MessageFlags.Ephemeral });
-    }
-    switch (interaction.customId) {
+    switch (interaction.customId.split('-')[0] || interaction.customId) {
+      case ('ban'):
+        bottleban.push(interaction.user.id);
+        fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+        await interaction.reply({ content: 'user banned from adding bottles', flags: MessageFlags.Ephemeral });
+        break;
+      case ('report'):
+        reportban.push(interaction.user.id);
+        fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+        await interaction.reply({ content: 'user banned from reporting bottles', flags: MessageFlags.Ephemeral });
+        break;
+      case ('blacklist'):
+        blacklist.users.push(interaction.user.id);
+        fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
+        await interaction.reply({ content: 'user banned from bot', flags: MessageFlags.Ephemeral });
+        break;
       case ('beachReply'):
         await reply(interaction);
         break;
@@ -63,7 +63,13 @@ export default async function handleInteraction(
           });
           return;
         }
-        await report(interaction.message.embeds[0], client, interaction);
+        await report(Number(interaction.customId.split('-')[1]), client, interaction);
+        break;
+      case ('placeholder'):
+          await interaction.reply({
+            content: 'be patient now',
+            flags: MessageFlags.Ephemeral
+          });
         break;
       default:
         await interaction.reply({

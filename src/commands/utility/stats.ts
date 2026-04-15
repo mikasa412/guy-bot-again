@@ -77,18 +77,23 @@ export async function execute(
             if (stats) statsuser = stats;
 			statsuser = statsuser.replace(/_/g, " ");
         }
-  	const embed = new EmbedBuilder()
-        .setTitle(`stats for ${targetMember.nickname ? targetMember.nickname : targetMember.user.displayName}`)
-        .setDescription(statsuser)
-        .setTimestamp();
 
-  	await interaction.reply({ embeds: [embed]});
-        sqlConn.release();
-  } catch (err) {
-    console.error('Error in request:', err);
-    await interaction.reply({
-		content: 'SQL error in stats fetch, go yell at me to fix it',
-		flags: MessageFlags.Ephemeral
-	});
-  }
+		const evilchance: boolean = Math.floor(Math.random() * 50) == 0;
+
+		const embed = new EmbedBuilder()
+			.setTitle((evilchance ? 'EVIL ' : '') + `stats for ${targetMember.nickname ? targetMember.nickname : targetMember.user.displayName}`)
+			.setDescription(statsuser)
+			.setTimestamp();
+			if (evilchance) embed.setColor(0xFF0000);
+
+		await interaction.reply({ embeds: [embed]});
+		
+		sqlConn.release();
+  	} catch (err) {
+		console.error('Error in request:', err);
+		await interaction.reply({
+			content: 'SQL error in stats fetch, go yell at me to fix it',
+			flags: MessageFlags.Ephemeral
+		});
+  	}
 }

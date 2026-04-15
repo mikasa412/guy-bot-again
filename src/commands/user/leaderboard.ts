@@ -13,7 +13,7 @@ export const data = new SlashCommandBuilder()
 			.setRequired(true)
 			.addChoices(
             { name: "bottles thrown", value: "bottles_thrown" },
-            { name: "recs created", value: "recs_created" },
+            { name: "bottle likes", value: "bottle_likes" },
             { name: "redditcares", value: "redditcares" }
           ));
 export async function execute(

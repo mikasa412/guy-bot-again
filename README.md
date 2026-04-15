@@ -1,7 +1,6 @@
-## mikasa bot 
-### v0.5.8 - reporting/laundry list
-- added back reporting & more stuff on the moderation side
-- bottle ban exists now
-- changelog command!!!!!!! ! ! ! !!  ! ! ! ! ! ! !
-- fixed way too many txpos and things
-- made a few more probably
+## v0.6 - the likes update!
+- added a like button to bottles
+- fixed a few tpyos from 0.5.8
+- added a leaderboard for bottle likes
+- added your like count to the stats page
+- there's a chance for things to go wrong...

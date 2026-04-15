@@ -10,5 +10,7 @@ export async function execute(
   interaction: CommandInteraction
 ) {
   await increment(interaction.user.id, "pings");
-  await interaction.reply(`pong (${client.ws.ping}ms)`);
+  const evilchance = Math.random();
+  const response = evilchance < 0.04 ? `EVIL pong! (${client.ws.ping * 6}ms)` : `pong (${client.ws.ping}ms)`;
+  await interaction.reply(response);
 }
