@@ -123,7 +123,13 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
     }
 
     beach.cache[bottle].likes.push(interaction.user.id);
-    const thrower = client.users.cache.find(u => u.username === beach.cache[bottle].author);
+    fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
+
+    const likeCount = beach.cache[bottle].likes.length;
+    await interaction.message.edit({content: interaction.message.content + `\n<:like:1430633436355498014> **${likeCount}** ${likeCount === 1 ? 'like' : 'likes'}`});
+
+
+    const thrower = await client.users.fetch(beach.cache[bottle].authorID).catch(() => null);
     if (thrower) {
         try {
             await increment(thrower.id, "bottle_likes", 1, 1);
@@ -135,13 +141,18 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
         } catch (err) {
             console.error('error incrementing likes: ', err);
             await interaction.reply({
-                content: 'liked! (but couldn\'t update stats for some reason)',
+                content: 'stats error, but liked!',
                 flags: MessageFlags.Ephemeral
             });
             return;
         }
+    } else {
+        await interaction.reply({
+            content: 'liked! (but couldn\'t find the thrower to give them their like, rip)',
+            flags: MessageFlags.Ephemeral
+        });
+        return;
     }
-
 }
 
 export async function report(bottle: number, client: Client, interaction: ButtonInteraction) {
@@ -218,7 +229,7 @@ export async function execute(
         return;
     }
 
-    let bottle: { author: string, message: string, date: string, reply: [string, string] | null, hush: string };
+    let bottle: { author: string, authorID: number, message: string, date: string, reply: [string, string] | null, hush: string };
         while (!bottle) {
             bottle = bottles[Math.floor(Math.random() * bottles.length)];
             if (bottle.author == interaction.user.tag) {
@@ -230,6 +241,7 @@ export async function execute(
     
     cache[bID] = {
         author: bottle.author,
+        authorID: bottle.authorID,
         hush: bottle.hush,
         message: bottle.message,
         likes: [],
@@ -241,8 +253,8 @@ export async function execute(
     fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
 
     const reportB = new ButtonBuilder()
-        .setCustomId('beachReport')
-        .setLabel(`report-${bID}`)
+        .setCustomId(`beachReport-${bID}`)
+        .setLabel(`report`)
         .setStyle(ButtonStyle.Danger)
         .setEmoji('<:report:1430633462989193287>')
 
@@ -253,7 +265,7 @@ export async function execute(
         .setEmoji('<:reply:1440461154072924212>')
 
     const likeB = new ButtonBuilder()
-        .setCustomId(`placeholder-${bID}`)
+        .setCustomId(`like-${bID}`)
         .setLabel('like')
         .setStyle(ButtonStyle.Success)
         .setEmoji('<:like:1430633436355498014>')

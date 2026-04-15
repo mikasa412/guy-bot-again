@@ -43,7 +43,8 @@ export async function execute(
     const newBottle = {
         ...bottletemplate,
         message: message,
-        author: member.user.tag,
+        author: interaction.user.tag,
+        authorID: interaction.user.id,
         hush:  hush ? hush : 'N',
         reply: null, 
         date: Math.floor(Date.now() / 1000)

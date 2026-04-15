@@ -1,6 +1,6 @@
 import { MessageFlags, TextChannel, type Client, type Interaction } from "discord.js";
 import { handleModalSubmit } from "../../commands/user/recscreate";
-import { reply, reply2, report } from "../../commands/user/beach view";
+import { reply, reply2, report, like } from "../../commands/user/beach view";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -64,6 +64,9 @@ export default async function handleInteraction(
           return;
         }
         await report(Number(interaction.customId.split('-')[1]), client, interaction);
+        break;
+      case ('like'):
+        await like(Number(interaction.customId.split('-')[1]), client, interaction);
         break;
       case ('placeholder'):
           await interaction.reply({
