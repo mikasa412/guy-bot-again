@@ -66,7 +66,7 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
     const now = Math.floor(Date.now() / 1000);
     if (beach.cache[oldbottleID].date + parseInt(process.env.reply_window) < now) {
         delete beach.cache[oldbottleID];
-        await interaction.reply({
+        await interaction.followUp({
             content: 'sorry, this bottle is too old to reply to',
             flags: MessageFlags.Ephemeral
         });
@@ -95,6 +95,8 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
 }
 
 export async function like(bottle: number, client: Client, interaction:ButtonInteraction) {
+    await interaction.deferReply({flags:MessageFlags.Ephemeral});
+
     const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
     if (!beach.cache[bottle]) {
         await interaction.reply({
@@ -107,7 +109,7 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
     const now = Math.floor(Date.now() / 1000);
     if (beach.cache[bottle].date + parseInt(process.env.reply_window) < now) {
         delete beach.cache[bottle];
-        await interaction.reply({
+        await interaction.followUp({
             content: 'sorry, this bottle is too old to like',
             flags: MessageFlags.Ephemeral
         });
@@ -115,7 +117,7 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
     }
 
     if (beach.cache[bottle].likes.includes(interaction.user.id)) {
-        await interaction.reply({
+        await interaction.followUp({
             content: 'you already liked this bottle',
             flags: MessageFlags.Ephemeral
         });
@@ -126,28 +128,28 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
     fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
 
     const likeCount = beach.cache[bottle].likes.length;
-    await interaction.message.edit({content: interaction.message.content + `\n<:like:1430633436355498014> **${likeCount}** ${likeCount === 1 ? 'like' : 'likes'}`});
+    await interaction.message.edit({content: `\n<:like:1430633436355498014> **${likeCount}** ${likeCount === 1 ? 'like' : 'likes'}`});
 
 
-    const thrower = await client.users.fetch(beach.cache[bottle].authorID).catch(() => null);
+    const thrower = beach.cache[bottle].authorID;
     if (thrower) {
         try {
-            await increment(thrower.id, "bottle_likes", 1, 1);
-            await interaction.reply({
+            await increment(thrower, "bottle_likes", 1, 1);
+            await interaction.followUp({
                 content: 'liked!',
                 flags: MessageFlags.Ephemeral
             });
             return;
         } catch (err) {
             console.error('error incrementing likes: ', err);
-            await interaction.reply({
+            await interaction.followUp({
                 content: 'stats error, but liked!',
                 flags: MessageFlags.Ephemeral
             });
             return;
         }
     } else {
-        await interaction.reply({
+        await interaction.followUp({
             content: 'liked! (but couldn\'t find the thrower to give them their like, rip)',
             flags: MessageFlags.Ephemeral
         });
@@ -230,13 +232,20 @@ export async function execute(
     }
 
     let bottle: { author: string, authorID: number, message: string, date: string, reply: [string, string] | null, hush: string };
-        while (!bottle) {
-            bottle = bottles[Math.floor(Math.random() * bottles.length)];
-            if (bottle.author == interaction.user.tag) {
-                bottle = null;
-            }
+    const iIndex = Math.floor(Math.random() * bottles.length);
+    for (let i = iIndex; i < bottles.length; i++) {
+        bottle = bottles[i % bottles.length];
+        if (bottle.author == interaction.user.tag) {
+            bottle = null;
         }
-        bottles.splice(bottles.indexOf(bottle), 1);
+    }
+
+    if (!bottle) {
+        await interaction.followUp("either there aren't any bottles here or all of them were thrown by you - try again later or ask someone else to /beachadd");
+        return;
+    }
+
+    bottles.splice(bottles.indexOf(bottle), 1);
     
     
     cache[bID] = {

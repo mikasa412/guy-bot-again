@@ -135,6 +135,8 @@ export async function handleModalSubmit(
     const logC = await client.channels.fetch(process.env.recs_log) as TextChannel;
     await logC.send(JSON.stringify(newRec, null, 2));
 
+    await increment(interaction.user.id, "recs_created", 1, 1);
+
     fs.writeFileSync(recsPath, JSON.stringify(recs, null, 2));
       interaction.reply({
         content: "posted!",
@@ -147,7 +149,6 @@ export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
 ) {
-  await increment(interaction.user.id, "recs_created", 1, 1);
   const modal = recModal();
   await interaction.showModal(modal);
 }
