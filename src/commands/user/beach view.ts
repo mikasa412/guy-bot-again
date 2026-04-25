@@ -233,13 +233,12 @@ export async function execute(
 
     let bottle: { author: string, authorID: number, message: string, date: string, reply: [string, string] | null, hush: string };
     const iIndex = Math.floor(Math.random() * bottles.length);
-    for (let i = iIndex; i < bottles.length; i++) {
-        bottle = bottles[i % bottles.length];
-        if (bottle.author == interaction.user.tag) {
-            bottle = null;
-        }
+    for (let i = 0; i < bottles.length; i++) {
+          bottle = bottles[i + iIndex % bottles.length];
+          if (bottle.author != interaction.user.tag) break;
+          else bottle = null;
     }
-
+    
     if (!bottle) {
         await interaction.followUp("either there aren't any bottles here or all of them were thrown by you - try again later or ask someone else to /beachadd");
         return;
