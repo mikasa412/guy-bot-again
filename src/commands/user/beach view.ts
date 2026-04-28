@@ -8,6 +8,7 @@ dotenv.config();
 
 const beachPath = path.join(__dirname, "../../../jsons/beach.json");
 const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
+const now = Math.floor(Date.now() / 1000);
 
 export const data = new SlashCommandBuilder()
     .setName("beachview")
@@ -63,7 +64,6 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
     }
 
     // check if too old to reply to
-    const now = Math.floor(Date.now() / 1000);
     if (beach.cache[oldbottleID].date + parseInt(process.env.reply_window) < now) {
         delete beach.cache[oldbottleID];
         await interaction.followUp({
@@ -207,17 +207,28 @@ export async function execute(
     client: Client,
     interaction: ChatInputCommandInteraction
 ) {
+    if (Math.floor(Math.random() * 150) == 0) {
+        interaction.reply({
+            embeds: [new EmbedBuilder({
+                title: 'picked up a crab!',
+                description: 'ouch',
+                footer: {text: 'ID: 🦀 |    bottles on the beach'}
+            })]
+        });
+        return;
+    }
+
     const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
 
     const bID = beach.bottleID;
 
+    const now = Math.floor(Date.now() / 1000);
     beach.bottleID += 1;
     
     const bottles = beach.bottles;
     const cache = beach.cache;
     
     // Clean old cache entries
-    const now = Math.floor(Date.now() / 1000);
     for (const id in cache) {
         if (cache[id].date + process < now) {
             delete cache[id];
@@ -234,7 +245,7 @@ export async function execute(
     let bottle: { author: string, authorID: number, message: string, date: string, reply: [string, string] | null, hush: string };
     const iIndex = Math.floor(Math.random() * bottles.length);
     for (let i = 0; i < bottles.length; i++) {
-          bottle = bottles[i + iIndex % bottles.length];
+          bottle = bottles[(i + iIndex) % bottles.length];
           if (bottle.author != interaction.user.tag) break;
           else bottle = null;
     }
@@ -245,7 +256,15 @@ export async function execute(
     }
 
     bottles.splice(bottles.indexOf(bottle), 1);
-    
+
+
+    bottle.message = bottle.message.replace(/{name}/g, interaction.guild ? (interaction.member as GuildMember).nickname : interaction.user.displayName)
+                                   .replace(/{time}/g, `<t:${now}:t>`)
+                                   .replace(/{date}/g, `<t:${now}:D>`);
+
+    const place = Math.floor(Math.random() * 100) < 5 ? 'fish tank' : 'beach';
+    const item = Math.floor(Math.random() * 100) < 2.5 ? 'fortune cookie' : 'bottle';
+    const header = Math.floor(Math.random() * 100) < 1 ? (bottle.hush !== 'Y' ? bottle.author : 'some guy') + ` just walked up to you and handed you this ${item} idk` : `picked up a bottle!${bottle.hush !== 'Y' ? ` (from ${bottle.author})` : '' }`;
     
     cache[bID] = {
         author: bottle.author,
@@ -253,7 +272,7 @@ export async function execute(
         hush: bottle.hush,
         message: bottle.message,
         likes: [],
-        date: Math.floor(Date.now() / 1000)
+        date: now
     }
 
     const time = bottle.date;
@@ -281,9 +300,9 @@ export async function execute(
         .addComponents(likeB, replyB, reportB)
 
     const embed = new EmbedBuilder()
-        .setTitle(`picked up a bottle!${bottle.hush !== 'Y' ? ` (from ${bottle.author})` : '' }`)
+        .setTitle(header)
         .setDescription(bottle.message + "\n\n-# left on: <t:" + time + ':s>')
-        .setFooter({ text: `ID: ${bID + (bID % 100 == 0 ? ' 🎉' : '')} | ${bottles.length} bottles on the beach` });
+        .setFooter({ text: `ID: ${bID + (bID % 100 == 0 ? ' 🎉' : '')} | ${bottles.length} bottles on the ${place}` });
 
     let replyEmbed = null
     
