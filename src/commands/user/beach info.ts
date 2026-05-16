@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
 
     for (const bottle in beach.cache) {
         const element = beach.cache[bottle];
-        if (element.date + Number(process.env.reply_window) < now) {
+        if (element.date + Number(process.env.cache_window) < now) {
             delete beach.cache[bottle];
         }
     }

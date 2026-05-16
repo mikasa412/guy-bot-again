@@ -36,7 +36,7 @@ export async function execute(
 			.setDescription(statsuser)
 			.setTimestamp();
 
-		await interaction.reply({ embeds: [embed]});
+		await interaction.reply({ embeds: [embed] });
 		sqlConn.release();
 	} catch (err) {
 		console.error('Error in request:', err);

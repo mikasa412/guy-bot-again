@@ -1,6 +1,7 @@
-import { MessageFlags, TextChannel, type Client, type Interaction } from "discord.js";
+import { MessageFlags, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, TextChannel, type Client, type Interaction } from "discord.js";
 import { handleModalSubmit } from "../../commands/user/recscreate";
-import { reply, reply2, report, like } from "../../commands/user/beach view";
+import { reply2, report, like } from "../../commands/user/beach view";
+import { c4accept, c4turn } from "../../commands/user/redditcares copy";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -17,8 +18,8 @@ export default async function handleInteraction(
   const logC = await client.channels.fetch(process.env.global_log) as TextChannel;
   if (interaction.isModalSubmit()) { 
     console.log(`Processing modal submit: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
-    await logC.send(`Processing modal submit: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"} \n full interaction data: \`\`\`${String(interaction)}\`\`\``);
-    switch (interaction.customId) {
+    await logC.send(`Processing modal submit: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"} \n full interaction data: \`\`\`${String(interaction.context)}\`\`\``);
+    switch (interaction.customId.split('-')[0] || interaction.customId) {
       case ('recmodal'): 
         await handleModalSubmit(client, interaction);
         break;
@@ -53,7 +54,29 @@ export default async function handleInteraction(
         await interaction.reply({ content: 'user banned from bot', flags: MessageFlags.Ephemeral });
         break;
       case ('beachReply'):
-        await reply(interaction);
+        const id = interaction.customId.split('-')[1];
+        const modal = new ModalBuilder()
+          .setCustomId('replymodal-'+id)
+          .setTitle('replying to bottle #'+id);
+
+        const replyInput = new TextInputBuilder()
+          .setCustomId('reply')
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(255)
+          .setMinLength(10)
+
+        const titleLabel = new LabelBuilder()
+          .setLabel("ok so what do you want to say")
+          .setTextInputComponent(replyInput);
+
+        modal.addLabelComponents(titleLabel)
+
+        await interaction.showModal(modal);
+
+        break;
+      case ('start4'): 
+        await c4accept(interaction, interaction.customId.split('-')[1], interaction.customId.split('-')[2]);
+        await interaction.reply({ content: 'yippee', flags: MessageFlags.Ephemeral });
         break;
       case ('beachReport'):
         if (reportban.includes(interaction.user.id)) {
@@ -81,7 +104,14 @@ export default async function handleInteraction(
         });
     }
   }
-	
+
+	if (interaction.isStringSelectMenu()) {
+    switch (interaction.customId.split('-')[0] || interaction.customId) {
+      case ('start4'): { await c4turn(interaction); break; }
+      default: await interaction.reply({ content: '[error code 73] yellow diamonds shinin like pee pee', flags: MessageFlags.Ephemeral });
+    }
+  }
+  
   if (interaction.isChatInputCommand()) {
 
     const command = client.commands.get(interaction.commandName);
@@ -103,11 +133,13 @@ export default async function handleInteraction(
       });
       return;
     }
+    const line1 = `Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`;
+    if (interaction.options.getUser)
+    await logC.send(line1 + `\n full command data: \`\`\`${String(interaction)}\`\`\``);
+    console.log(line1);
 
     try {
       
-      await logC.send(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"} \n full command data: \`\`\`${String(interaction)}\`\`\``);
-      console.log(`Executing ${interaction.commandName} command for ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
       await command.execute(client, interaction);
     } catch (err) {
       console.error(`[${interaction.commandName}] execution error:`, err);

@@ -9,12 +9,12 @@ export default async function execute(
     client: Client,
     interaction: Message
 ) {
-    if (interaction.mentions.has(client.user.id) && !interaction.author.bot) {
+    if (interaction.mentions.has(client.user.id) && (interaction.author.id !== client.user.id)) {
         if (interaction.content.includes('?')) {
             const question = interaction.content;
             const ballers = [
                 "Without a doubt",
-                "fuck yea [#100percent](https://hashtag)",
+                "fuck yea [#100percent](https://coolmathgames.com)",
                 "You may rely on it",
                 "As I see it, yes",
                 "Most likely",

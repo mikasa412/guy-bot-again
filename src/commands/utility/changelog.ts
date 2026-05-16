@@ -9,7 +9,7 @@ export async function execute(
   client: Client,
   interaction: CommandInteraction
 ) {
-  const readme: string = await fs.promises.readFile("./README.md", "utf-8");
+  const readme: string = await fs.promises.readFile("./UPDATE.md", "utf-8");
 
   const changelog = new EmbedBuilder()
     .setTitle("changelog (fetched from the github)")

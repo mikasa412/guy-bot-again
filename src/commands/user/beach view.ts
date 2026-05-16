@@ -8,51 +8,17 @@ dotenv.config();
 
 const beachPath = path.join(__dirname, "../../../jsons/beach.json");
 const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
-const now = Math.floor(Date.now() / 1000);
+function now() { return Math.floor(Date.now() / 1000); }
 
 export const data = new SlashCommandBuilder()
-    .setName("beachview")
-    .setDescription("find a bottle on the beach")
-
-export function replyModal() {
-    const modal = new ModalBuilder().setCustomId('replymodal').setTitle('holy crap lois');
-
-    const replyInput = new TextInputBuilder()
-        .setCustomId('reply')
-        .setStyle(TextInputStyle.Short)
-        .setMaxLength(255)
-        .setMinLength(10)
-
-    const titleLabel = new LabelBuilder()
-        .setLabel("ok so what do you want to say")
-        .setTextInputComponent(replyInput);
-
-    const idInput = new TextInputBuilder()
-        .setCustomId('bottle')
-        .setStyle(TextInputStyle.Short)
-        .setMaxLength(6)
-
-    const idLabel = new LabelBuilder()
-        .setLabel("get the ID at the bottom of the bottle")
-        .setTextInputComponent(idInput);
-
-    modal.addLabelComponents(idLabel, titleLabel)
-    return modal;
-}
-
-export async function reply(interaction:ButtonInteraction) {
-    const modal = replyModal();
-    await interaction.showModal(modal);
-}
+    .setName("beachfind")
+    .setDescription("find a new bottle on the beach")
 
 export async function reply2(client: Client, interaction:ModalSubmitInteraction) {
     
     await interaction.deferReply({flags:MessageFlags.Ephemeral});
 
-    const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
-    const oldbottleID = interaction.fields.getTextInputValue('bottle');
-    const newuser = interaction.user.tag;
-    const content = interaction.fields.getTextInputValue('reply');
+    const oldbottleID = interaction.customId.split('-')[1];
     const bottletemplate = beach.bottletemplate;
     
     if (!beach.cache[oldbottleID]) {
@@ -64,8 +30,8 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
     }
 
     // check if too old to reply to
-    if (beach.cache[oldbottleID].date + parseInt(process.env.reply_window) < now) {
-        delete beach.cache[oldbottleID];
+    if (beach.cache[oldbottleID].date + parseInt(process.env.reply_window) < now()) {
+        if (beach.cache[oldbottleID].date + parseInt(process.env.cache_window) < now()) delete beach.cache[oldbottleID];
         await interaction.followUp({
             content: 'sorry, this bottle is too old to reply to',
             flags: MessageFlags.Ephemeral
@@ -75,8 +41,9 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
 
     const newBottle = {
         ...bottletemplate,
-        message: content,
-        author: newuser,
+        message: interaction.fields.getTextInputValue('reply'),
+        author: interaction.user.tag,
+        authorID: interaction.user.id,
         hush:  'N',
         reply: [beach.cache[oldbottleID].hush === 'Y' ? 'someone' : beach.cache[oldbottleID].author, beach.cache[oldbottleID].message],
         date: Math.floor(Date.now() / 1000)
@@ -97,20 +64,11 @@ export async function reply2(client: Client, interaction:ModalSubmitInteraction)
 export async function like(bottle: number, client: Client, interaction:ButtonInteraction) {
     await interaction.deferReply({flags:MessageFlags.Ephemeral});
 
-    const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
+    if (beach.cache[bottle].date + parseInt(process.env.cache_window) < now()) delete beach.cache[bottle];
+
     if (!beach.cache[bottle]) {
         await interaction.reply({
-            content: 'invalid bottle ID',
-            flags: MessageFlags.Ephemeral
-        });
-        return;
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    if (beach.cache[bottle].date + parseInt(process.env.reply_window) < now) {
-        delete beach.cache[bottle];
-        await interaction.followUp({
-            content: 'sorry, this bottle is too old to like',
+            content: 'sorry, this bottle is either too old or doesn\'t exist',
             flags: MessageFlags.Ephemeral
         });
         return;
@@ -158,7 +116,6 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
 }
 
 export async function report(bottle: number, client: Client, interaction: ButtonInteraction) {
-    const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
     if (!interaction.memberPermissions?.has("ManageMessages")) {
         await interaction.reply({
             content: 'sorry, but only mods can do this due to abuse - better fix is in the works',
@@ -212,31 +169,43 @@ export async function execute(
             embeds: [new EmbedBuilder({
                 title: 'picked up a crab!',
                 description: 'ouch',
-                footer: {text: 'ID: 🦀 |    bottles on the beach'}
+                footer: {text: 'ID: 🦀 | 56,973,736,970 crabs on the beach'}
             })]
         });
         return;
     }
 
-    const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
+    await interaction.deferReply();
 
-    const bID = beach.bottleID;
-
-    const now = Math.floor(Date.now() / 1000);
-    beach.bottleID += 1;
+    
+    const now_ = now();
+    const cooldown = beach.cooldowns;
+    let factor = 0;
+    let cooldownTime = 0;
+    for (const entry of cooldown) {
+        if (entry[0] === interaction.user.id) {
+            factor += 1;
+            cooldownTime = Math.max(cooldownTime, entry[1]);
+        }
+    }
+    if (cooldownTime !== 0) {
+        const calcdown = cooldownTime + Number(process.env.pull_cd_base) * Math.pow(Number(process.env.pull_cd_factor), factor-1);
+        if (calcdown > now_) {
+            await interaction.followUp({
+                content: `chill, don't drain the beach - you can have another go <t:${calcdown}:R>`,
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+    }
+    cooldown.push([interaction.user.id, now_]);
+    cooldown.splice(0, cooldown.length - Number(process.env.max_cd_entries));
     
     const bottles = beach.bottles;
     const cache = beach.cache;
     
-    // Clean old cache entries
-    for (const id in cache) {
-        if (cache[id].date + process < now) {
-            delete cache[id];
-        }
-    }
+    for (const id in cache) if (cache[id].date + Number(process.env.cache_window) < now_) delete cache[id];
 
-    await interaction.deferReply();
-    
     if (bottles.length === 0) {
         await interaction.reply("you're unlucky this time... maybe throw a bottle in the sea with /beachadd and try again later?");
         return;
@@ -255,24 +224,29 @@ export async function execute(
         return;
     }
 
+    const bID = beach.bottleID;
+    beach.bottleID += 1;
+
     bottles.splice(bottles.indexOf(bottle), 1);
 
 
     bottle.message = bottle.message.replace(/{name}/g, interaction.guild ? (interaction.member as GuildMember).nickname : interaction.user.displayName)
-                                   .replace(/{time}/g, `<t:${now}:t>`)
-                                   .replace(/{date}/g, `<t:${now}:D>`);
+                                   .replace(/{time}/g, `<t:${now_}:t>`)
+                                   .replace(/{date}/g, `<t:${now_}:D>`)
+                                   .replace(/{ping}/g, `<@${interaction.user.id}>`);
 
     const place = Math.floor(Math.random() * 100) < 5 ? 'fish tank' : 'beach';
     const item = Math.floor(Math.random() * 100) < 2.5 ? 'fortune cookie' : 'bottle';
-    const header = Math.floor(Math.random() * 100) < 1 ? (bottle.hush !== 'Y' ? bottle.author : 'some guy') + ` just walked up to you and handed you this ${item} idk` : `picked up a bottle!${bottle.hush !== 'Y' ? ` (from ${bottle.author})` : '' }`;
+    const header = Math.floor(Math.random() * 100) < 1 ? (bottle.hush !== 'Y' ? bottle.author : 'some guy') + ` just walked up to you and handed you this ${item} idk` : `picked up a ${item}!${bottle.hush !== 'Y' ? ` (from ${bottle.author})` : '' }`;
     
     cache[bID] = {
         author: bottle.author,
         authorID: bottle.authorID,
         hush: bottle.hush,
         message: bottle.message,
+        reply: bottle.reply,
         likes: [],
-        date: now
+        date: now_
     }
 
     const time = bottle.date;
@@ -286,7 +260,7 @@ export async function execute(
         .setEmoji('<:report:1430633462989193287>')
 
     const replyB = new ButtonBuilder()
-        .setCustomId(`beachReply`)
+        .setCustomId(`beachReply-${bID}`)
         .setLabel('reply')
         .setStyle(ButtonStyle.Primary)
         .setEmoji('<:reply:1440461154072924212>')
@@ -308,7 +282,7 @@ export async function execute(
     
     if (bottle.reply) {
         replyEmbed = new EmbedBuilder()
-            .setTitle(`(original by ${bottle.reply[0]})`)
+            .setTitle(`(reply to a bottle by ${bottle.reply[0]})`)
             .setDescription(bottle.reply[1])
     }
 

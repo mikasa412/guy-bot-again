@@ -13,6 +13,8 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option =>
             option.setName("message")
                     .setDescription("the message in the bottle")
+                    .setMaxLength(255)
+                    .setMinLength(10)
                     .setRequired(true))
     .addStringOption(option =>
             option.setName("hush")
@@ -25,6 +27,8 @@ export async function execute(
     client: Client,
     interaction: ChatInputCommandInteraction
 ) {
+    await interaction.deferReply({flags:MessageFlags.Ephemeral});
+
     const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
     const bottletemplate = beach.bottletemplate;
     const bottles = beach.bottles;
@@ -49,8 +53,6 @@ export async function execute(
         reply: null, 
         date: Math.floor(Date.now() / 1000)
     };
-
-    await interaction.deferReply({flags:MessageFlags.Ephemeral});
 
     bottles.push(newBottle);
 

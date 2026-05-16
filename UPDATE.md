@@ -1,0 +1,13 @@
+## v0.7.0 - bottles part 4 and first game!
+- added cache window, which handles like submit times
+- reply window now only tracks reply time
+- moved /beachview to /beachfind
+- /beachview now shows every bottle pulled over the last (cache window) in one message with page display
+- also quick likes/replies for in the window
+- made a real update page (you're reading it now!) and started retroactively adding older updates to the changelog
+- separated changelog from readme file (it's bad for now wtv)
+- switched /changelog to show update.md
+- added a connect 4 game (and the structure for easily adding more)
+- added a variable cooldown system based on how many of the last X bottles were pulled by you
+- 4 more variables in the env file (cache window, cooldown base, cooldown factor, max cd tracking)
+- added max and min length for all bottles now, not just replies

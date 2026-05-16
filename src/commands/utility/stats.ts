@@ -7,6 +7,31 @@ const statsPath = path.join(__dirname, "../../../jsons/stats.json");
 
 dotenv.config();
 
+export async function ruthbaderginsburg(
+	game: string,
+	winnerID: string,
+	loserID: string,
+	draw: number = 0
+) {
+	const sqlConn = await pool.getConnection();
+	
+	try {
+		if (draw) {
+			const statD = `UPDATE ${process.env.sql_usertable} SET ${game} = JSON_SET(${game}, '$[2]', JSON_EXTRACT(${game}, '$[2]') + 1) WHERE Hdiscord_id IN (${winnerID}, ${loserID});`;
+			await sqlConn.query(statD);
+			return;
+		}
+		const statWL1 = `UPDATE ${process.env.sql_usertable} SET ${game} = JSON_SET(${game}, '$[0]', JSON_EXTRACT(${game}, '$[0]') + 1) WHERE Hdiscord_id = ${winnerID};`;
+		await sqlConn.query(statWL1);
+		const statWL2 = `UPDATE ${process.env.sql_usertable} SET ${game} = JSON_SET(${game}, '$[1]', JSON_EXTRACT(${game}, '$[1]') + 1) WHERE Hdiscord_id = ${loserID};`;
+		await sqlConn.query(statWL2);
+	} catch (err) {
+		console.error('error on increment: ', err);
+	} finally {
+		if (sqlConn?.release) await sqlConn.release();
+	}
+}
+
 export async function increment(
 	ID: string,
 	command: string,
