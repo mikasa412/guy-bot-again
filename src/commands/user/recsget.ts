@@ -28,6 +28,9 @@ export async function execute(
   client: Client,
   interaction: ChatInputCommandInteraction
 ) {
+
+  await interaction.deferReply();
+
   const recs = JSON.parse(fs.readFileSync(recsPath, "utf-8"));
   const type = interaction.options.getString("type", true);
   
@@ -46,5 +49,5 @@ export async function execute(
     .setFooter({ text: `category: ${type} | ${recs[type].length} total reviews in this category` });
 
   fs.writeFileSync(recsPath, JSON.stringify(recs, null, 2));
-  interaction.reply({ embeds: [embed] });
+  await interaction.followUp({ embeds: [embed] });
 };
