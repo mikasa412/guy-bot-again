@@ -86,7 +86,7 @@ export async function execute(
 
     const cacheKeys = Object.keys(cache);
     if (cacheKeys.length === 0) {
-        await interaction.reply("no bottles here... strange. maybe try and find one?");
+        await interaction.followUp("no bottles here... strange. maybe try and find one?");
         return;
     }
 
