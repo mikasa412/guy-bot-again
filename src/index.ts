@@ -18,6 +18,7 @@ const client: Client = new Client({
     Partials.Reaction,
     Partials.User
   ],
+  allowedMentions: { repliedUser: false }
 });
 
 const mariadb = require('mariadb');

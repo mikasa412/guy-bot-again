@@ -98,12 +98,19 @@ export async function c4accept(
 ) {
     await increment(interaction.user.id, "connect4_games");
     
-    if (targetId !== interaction.user.id) {
+    if (targetId !== interaction.user.id &&  targetId !== "OPEN") {
         await interaction.reply({
             content: "this isn't for you :P",
             flags: MessageFlags.Ephemeral
         });
         return;
+    }
+    if (targetId == "OPEN") {
+        await interaction.reply({
+            content: "you accepted an open challenge! good luck :)",
+            flags: MessageFlags.Ephemeral
+        });
+        targetId = interaction.user.id;
     }
     const row = await connect4menu(0, challengerId, targetId);
 
@@ -122,13 +129,15 @@ export async function c4turn(
     const turn: number = Number(vals[1]);
     const challengerId: string = vals[2];
     const targetId: string = vals[3];
-    if (interaction.user.id !== interaction.values[0].split("-")[turn%2+2]) { await interaction.reply({ content: "dialog3.txt", flags: MessageFlags.Ephemeral }); return; }
+    const pingId: string = vals[turn%2?2:3];
+    if (interaction.user.id !== vals[turn%2+2]) { await interaction.reply({ content: "dialog3.txt", flags: MessageFlags.Ephemeral }); return; }
     const orig = interaction.message;
     if (turn == 0) {
         await orig.edit({
+        allowedMentions: {repliedUser: true, users: [pingId]},
         components: [await connect4menu(1, challengerId, targetId)],
         embeds: [{ description: "⬛⬛⬛⬛⬛⬛⬛\n".repeat(5) + "⬛".repeat(column-1) + "🔴" + "⬛".repeat(7-column) }],
-        content: `<@${interaction.values[0].split("-")[turn%2+2]}> dropped a piece in column ${column}!\n<@${interaction.values[0].split("-")[turn%2?2:3]}> it's your turn!`
+        content: `<@${vals[turn%2+2]}> dropped a piece in column ${column}!\n<@${vals[turn%2?2:3]}> it's your turn!`
         });
     } else {
             const board = orig.embeds[0].description?.split("\n").map(r => Array.from(r)) ?? [];
@@ -145,21 +154,22 @@ export async function c4turn(
                     await orig.edit({
                             components: [],
                             embeds: [{ description: newBoard }],
-                            content: `<@${interaction.values[0].split("-")[turn%2+2]}> dropped a piece in column ${column} and won the game!`
+                            content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and won the game!`
                     });
-                    await ruthbaderginsburg('connect4', interaction.values[0].split("-")[turn%2+2], interaction.values[0].split("-")[turn%2?2:3]);
+                    await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3]);
             } else if (await windetect(board) === 'draw') {
                     await orig.edit({
                             components: [],
                             embeds: [{ description: newBoard }],
-                            content: `<@${interaction.values[0].split("-")[turn%2+2]}> dropped a piece in column ${column} and the game is a draw!`
+                            content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and the game is a draw!`
                     });
-                    await ruthbaderginsburg('connect4', interaction.values[0].split("-")[turn%2+2], interaction.values[0].split("-")[turn%2?2:3], 1);
+                    await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3], 1);
             } else {
                     await orig.edit({
-                            components: [await connect4menu(turn + 1, challengerId, targetId)],
-                            embeds: [{ description: newBoard }],
-                            content: `<@${interaction.values[0].split("-")[turn%2+2]}> dropped a piece in column ${column}!\n<@${interaction.values[0].split("-")[turn%2?2:3]}> it's your turn!`
+                        allowedMentions: {users: [pingId]},
+                        components: [await connect4menu(turn + 1, challengerId, targetId)],
+                        embeds: [{ description: newBoard }],
+                        content: `<@${vals[turn%2+2]}> dropped a piece in column ${column}!\n<@${vals[turn%2?2:3]}> it's your turn!`
                     });
             }
     }
@@ -175,14 +185,17 @@ export const data = new SlashCommandBuilder()
     .addUserOption(option =>
         option.setName("opponent")
             .setDescription("who are you playing against?")
-            .setRequired(true)
+            .setRequired(false)
     );
 export async function execute(
         client: Client,
         interaction: ChatInputCommandInteraction
 ) {
-    const target = interaction.options.getUser("opponent", true);
+    const target = interaction.options.getUser("opponent", false) || null;
+    let targetid: string = target?.id || "OPEN";
+    if (!target) { targetid = "OPEN"; }
     const member = interaction.member as GuildMember;
+    if (target){
     if (target.id == member.id) {
         await interaction.reply("play with yourself some other way");
         return;
@@ -196,6 +209,7 @@ export async function execute(
         await interaction.reply('play against a real person');
         return;
     }
+    }
     const embed = new EmbedBuilder()
         .setTitle("challenge!")
         .setDescription(`play connect 4 with ${member.nickname || member.user.globalName}?`)
@@ -204,7 +218,7 @@ export async function execute(
         .addComponents(
             new ButtonBuilder()
                 .setLabel("accept")
-                .setCustomId("start4-" + target.id + "-" + member.id)
+                .setCustomId("start4-" + targetid + "-" + member.id)
                 .setStyle(ButtonStyle.Primary))
-    await interaction.reply({ content: `challenge for <@${target.id}>!!`, embeds: [embed], components: [row] });
+    await interaction.reply({ content: target ? `challenge for <@${target.id}>!!` : `open challenge! play with ${member.nickname || member.user.globalName}?`, embeds: [embed], components: [row] });
 }

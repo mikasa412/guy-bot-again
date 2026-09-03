@@ -17,24 +17,24 @@ export const data = new SlashCommandBuilder()
             { name: "redditcares", value: "redditcares" }
           ));
 export async function execute(
-	client: Client,
-	interaction: ChatInputCommandInteraction
-	) {
-		const type = interaction.options.getString("type", true);
-		
-		let statsuser = `no stats found for ${type}`;
+client: Client,
+interaction: ChatInputCommandInteraction
+) {
+	const type = interaction.options.getString("type", true);
 
-		try {
-			const sqlConn = await pool.getConnection();
-			const result = await sqlConn.query(`SELECT Hdiscord_id, ${type} FROM ${process.env.sql_usertable} ORDER BY ${type} DESC LIMIT 10;`);
-			if (result.length !== 0) {
-				const stats = result.filter((user: any) => user[type] !== 0).map((user: any) => `<@${user.Hdiscord_id}>: **${user[type]}**`).join('\n');
-				if (stats) statsuser = stats;
-			}
-		const embed = new EmbedBuilder()
-			.setTitle(`top users for ${type.replace(/_/g, " ")}`)
-			.setDescription(statsuser)
-			.setTimestamp();
+	let statsuser = `no stats found for ${type}`;
+
+	try {
+		const sqlConn = await pool.getConnection();
+		const result = await sqlConn.query(`SELECT Hdiscord_id, ${type} FROM ${process.env.sql_usertable} ORDER BY ${type} DESC LIMIT 10;`);
+		if (result.length !== 0) {
+			const stats = result.filter((user: any) => user[type] !== 0).map((user: any) => `<@${user.Hdiscord_id}>: **${user[type]}**`).join('\n');
+			if (stats) statsuser = stats;
+		}
+	const embed = new EmbedBuilder()
+		.setTitle(`top users for ${type.replace(/_/g, " ")}`)
+		.setDescription(statsuser)
+		.setTimestamp();
 
 		await interaction.reply({ embeds: [embed] });
 		sqlConn.release();

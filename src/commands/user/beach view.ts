@@ -11,7 +11,7 @@ const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
 function now() { return Math.floor(Date.now() / 1000); }
 
 export const data = new SlashCommandBuilder()
-    .setName("beachfind")
+    .setName("beachview")
     .setDescription("find a new bottle on the beach")
 
 export async function reply2(client: Client, interaction:ModalSubmitInteraction) {

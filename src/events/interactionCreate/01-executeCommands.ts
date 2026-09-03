@@ -2,7 +2,6 @@ import { MessageFlags, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputSt
 import { handleModalSubmit } from "../../commands/user/recscreate";
 import { reply2, report, like } from "../../commands/user/beach view";
 import { c4accept, c4turn } from "../../commands/user/redditcares copy";
-import { pageturn } from "../../commands/user/beach view copy";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -39,9 +38,6 @@ export default async function handleInteraction(
     console.log(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
     await logC.send(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
     switch (interaction.customId.split('-')[0] || interaction.customId) {
-      case ('page'):
-        await pageturn(interaction, Number(interaction.customId.split('-')[1]));
-        break;
       case ('ban'):
         bottleban.push(interaction.user.id);
         fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
@@ -80,7 +76,6 @@ export default async function handleInteraction(
         break;
       case ('start4'): 
         await c4accept(interaction, interaction.customId.split('-')[1], interaction.customId.split('-')[2]);
-        await interaction.reply({ content: 'yippee', flags: MessageFlags.Ephemeral });
         break;
       case ('beachReport'):
         if (reportban.includes(interaction.user.id)) {
