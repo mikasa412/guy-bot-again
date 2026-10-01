@@ -1,12 +1,9 @@
 import { Client, GuildMember, TextChannel, Message } from "discord.js";
-import * as fs from "fs";
-import * as path from "path";
 import dotenv from 'dotenv';
-import { increment } from "../../commands/utility/stats";
+import { increment, react } from "../../commands/utility/stats";
 
 dotenv.config()
 
-const reactPath = path.join(__dirname, "../../../jsons/reactions.json");
 
 export default async function execute(
     client: Client,
@@ -62,16 +59,10 @@ export default async function execute(
                 await interaction.reply((question) + "\n**🎱 " + msgtosend + "**");
                 return;
             }
-            //get json & member
-            const reactions = JSON.parse(fs.readFileSync(reactPath, "utf-8"));
-            const member = interaction.member as GuildMember;
-
-            //grab reaction
-            const msgindex = Math.floor(Math.random() * reactions.length);
-            const msgtosend = reactions[msgindex] as string;
+            const reaction = await react();
 
             await increment(interaction.author.id, "reacts", 1, 1);
-            await interaction.reply(msgtosend.replace(/"/g, ''));
+            await interaction.reply(reaction);
         } catch (error) {
             console.log(error);
         }

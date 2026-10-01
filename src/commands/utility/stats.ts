@@ -1,11 +1,22 @@
 import { SlashCommandBuilder, EmbedBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel, MessageFlags } from "discord.js";
 import dotenv from 'dotenv';
-import * as fs from "fs";
-import * as path from "path";
 import { pool } from '../../index';
-const statsPath = path.join(__dirname, "../../../jsons/stats.json");
 
 dotenv.config();
+
+export async function react( gif: number = -1 ) {
+	const sqlConn = await pool.getConnection();
+
+	try {
+		let r: string;
+		if (gif == -1) r = (await sqlConn.query('SELECT * FROM reactbot ORDER BY RAND() LIMIT 1'))[0].phrase;
+		else r = (await sqlConn.query(`SELECT * FROM reactbot WHERE gif=${gif} ORDER BY RAND() LIMIT 1`))[0].phrase;
+		return r;
+	} catch (err) {
+		console.error('error with react:', err);
+		return 'placeholder (error)';
+	} finally { await sqlConn.release(); }
+}
 
 export async function ruthbaderginsburg(
 	game: string,
