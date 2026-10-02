@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, EmbedBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel, MessageFlags } from "discord.js";
+import { pool } from '../../index';
 import * as fs from "fs";
 import * as path from "path";
 import { increment } from "../utility/stats";
 
-const beachPath = path.join(__dirname, "../../../jsons/beach.json");
 const blacklistPath = path.join(__dirname, "../../../jsons/config.json");
 const blacklist = JSON.parse(fs.readFileSync(blacklistPath, "utf-8"));
 
@@ -20,48 +20,35 @@ export const data = new SlashCommandBuilder()
             option.setName("hush")
                     .setDescription("do you want to be anonymous?")
                     .addChoices(
-                        { name: "yes", value: "Y" },
-                        { name: "no", value: "N" }
+                        { name: "yes", value: "1" },
+                        { name: "no", value: "0" }
                     ));
 export async function execute(
     client: Client,
     interaction: ChatInputCommandInteraction
 ) {
-    await interaction.deferReply({flags:MessageFlags.Ephemeral});
-
-    const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
-    const bottletemplate = beach.bottletemplate;
-    const bottles = beach.bottles;
-    const member = interaction.member as GuildMember;
-    const message = interaction.options.getString("message", true);
-    const hush = interaction.options.getString('hush', false);
+    await interaction.deferReply({ flags:MessageFlags.Ephemeral });
 
     if (blacklist.blacklist.users.includes(interaction.user.id)) {
-        await interaction.reply({
+        await interaction.followUp({
             content: 'you are banned from adding to the beach',
             flags: MessageFlags.Ephemeral
         });
         return;
     }
 
-    const newBottle = {
-        ...bottletemplate,
-        message: message,
-        author: interaction.user.tag,
-        authorID: interaction.user.id,
-        hush:  hush ? hush : 'N',
-        reply: null, 
-        date: Math.floor(Date.now() / 1000)
-    };
+    const sqlConn = await pool.getConnection();
 
-    bottles.push(newBottle);
+    const message = interaction.options.getString("message", true);
+    const hush = Number(interaction.options.getString('hush', false)) || 0;
 
-    fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
+    await sqlConn.query(`INSERT INTO ${process.env.sql_beachtable} (message, author, authorID, hush, date) VALUES (\"${message.replace(/"/g, '\\"')}\", \"${interaction.user.tag}\", \"${interaction.user.id}\", ${hush}, \"${Math.floor(Date.now() / 1000)}\");`);
+	
+	sqlConn.release();
+
     await increment(interaction.user.id, "bottles_thrown", 1, 1);
     const logC = await client.channels.fetch(process.env.bottle_log) as TextChannel;
-    await logC.send(JSON.stringify(newBottle, null, 2).replace(/@/g, '@ '));
-    await interaction.followUp({
-        content: "you toss the bottle into the sea...",
-        flags: MessageFlags.Ephemeral
-    });
+    await logC.send(`(\"${message}\", \"${interaction.user.tag}\", \"${interaction.user.id}\", ${hush}, \"${Math.floor(Date.now() / 1000)}\")`.replace(/@/g, '@ '));
+
+    await interaction.followUp({ content: "you toss the bottle into the sea..." });
 };

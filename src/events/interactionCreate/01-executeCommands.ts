@@ -1,7 +1,8 @@
 import { MessageFlags, ModalBuilder, LabelBuilder, TextInputBuilder, TextInputStyle, TextChannel, type Client, type Interaction } from "discord.js";
 import { handleModalSubmit } from "../../commands/user/recscreate";
 import { reply2, report, like } from "../../commands/user/beach view";
-import { c4accept, c4turn } from "../../commands/user/redditcares copy";
+import { c4accept, c4turn } from "../../commands/user/connect4";
+import { accept } from "../../commands/utility/suggest";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -26,6 +27,15 @@ export default async function handleInteraction(
       case ('replymodal'):
         await reply2(client, interaction);
         break;
+      case ('send'):
+        const reply = interaction.fields.getTextInputValue('reply');
+        const uid = interaction.fields.getTextInputValue('uid');
+        client.users.send(uid, reply);
+        await interaction.reply({
+          content:'should be good',
+          flags: MessageFlags.Ephemeral
+        });
+        break;
       default:
         await interaction.reply({
           content: '[error code 71] you submitted a modal that doesn\'t exist?????? how the fuck',
@@ -35,26 +45,47 @@ export default async function handleInteraction(
   }
 
   if (interaction.isButton()) {
+    let id;
     console.log(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
     await logC.send(`Processing button click: ${interaction.customId} from ${interaction.user.tag} (${interaction.user.id}) in ${interaction.guild?.name || "user install"}`);
     switch (interaction.customId.split('-')[0] || interaction.customId) {
+      case ('accept'): 
+        await accept(interaction.message.embeds[0].description, interaction.message.embeds[0].footer.text.split(' ')[2], client);
+        await interaction.message.edit({
+          content: '**accepted!**', 
+          components: []
+        });
+        break;
+      case ('reject'):
+        await client.users.send(
+          interaction.message.embeds[0].footer.text.split(' ')[2],
+          `this reaction you suggested: ${interaction.message.embeds[0].description} - was rejected`
+        ); 
+        await interaction.message.edit({
+          content: '**rejected!**', 
+          components: []
+        });
+        break;
       case ('ban'):
-        bottleban.push(interaction.user.id);
+        id = interaction.customId.split('-')[1];
+        bottleban.push(id);
         fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
         await interaction.reply({ content: 'user banned from adding bottles', flags: MessageFlags.Ephemeral });
         break;
       case ('report'):
-        reportban.push(interaction.user.id);
+        id = interaction.customId.split('-')[1];
+        reportban.push(id);
         fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
         await interaction.reply({ content: 'user banned from reporting bottles', flags: MessageFlags.Ephemeral });
         break;
       case ('blacklist'):
-        blacklist.users.push(interaction.user.id);
+        id = interaction.customId.split('-')[1];
+        blacklist.users.push(id);
         fs.writeFileSync(blacklistPath, JSON.stringify({ blacklist, bottleban, reportban }, null, 4));
         await interaction.reply({ content: 'user banned from bot', flags: MessageFlags.Ephemeral });
         break;
       case ('beachReply'):
-        const id = interaction.customId.split('-')[1];
+        id = interaction.customId.split('-')[1];
         const modal = new ModalBuilder()
           .setCustomId('replymodal-'+id)
           .setTitle('replying to bottle #'+id);
@@ -146,7 +177,7 @@ export default async function handleInteraction(
       await logC.send(`[${interaction.commandName}] execution error: ` + err);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
-          content: "[error code 12] something went wrong after execution",
+          content: "[error code 11] something went wrong on execution",
           flags: MessageFlags.Ephemeral
         });
       } else {

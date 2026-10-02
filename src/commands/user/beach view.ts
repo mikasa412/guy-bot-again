@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, ModalSubmitInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Client, GuildMember, ChatInputCommandInteraction, TextChannel, ButtonStyle, Embed, ButtonInteraction, MessageFlags, ModalSubmitInteractionCollectorOptions } from "discord.js";
+import { pool } from '../../index';
 import * as fs from "fs";
 import * as path from "path";
 import { increment } from "../utility/stats";
@@ -6,8 +7,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const beachPath = path.join(__dirname, "../../../jsons/beach.json");
-const beach = JSON.parse(fs.readFileSync(beachPath, "utf-8"));
+const config = path.join(__dirname, "../../../jsons/config.json");
+const raw = JSON.parse(fs.readFileSync(config, "utf-8"));
 function now() { return Math.floor(Date.now() / 1000); }
 
 export const data = new SlashCommandBuilder()
@@ -15,58 +16,64 @@ export const data = new SlashCommandBuilder()
     .setDescription("find a new bottle on the beach")
 
 export async function reply2(client: Client, interaction:ModalSubmitInteraction) {
+
+    const now_ = now();
     
     await interaction.deferReply({flags:MessageFlags.Ephemeral});
 
+    const sqlConn = await pool.getConnection();
+
     const oldbottleID = interaction.customId.split('-')[1];
-    const bottletemplate = beach.bottletemplate;
+
+    await sqlConn.query(`DELETE FROM cache WHERE time < ${now_ - Number(process.env.cache_window)};`);
+    const cache = await sqlConn.query(`SELECT * FROM cache;`);
+
+    let bottle;
+    for (var temp of cache) { if (temp.bID == oldbottleID) { bottle = temp; break; } }
+
     
-    if (!beach.cache[oldbottleID]) {
+    if (!bottle) {
         await interaction.reply({
-            content: 'invalid bottle ID',
+            content: 'sorry, this one\'s too old',
             flags: MessageFlags.Ephemeral
         });
+        await sqlConn.release();
         return;
     }
 
-    // check if too old to reply to
-    if (beach.cache[oldbottleID].date + parseInt(process.env.reply_window) < now()) {
-        if (beach.cache[oldbottleID].date + parseInt(process.env.cache_window) < now()) delete beach.cache[oldbottleID];
-        await interaction.followUp({
-            content: 'sorry, this bottle is too old to reply to',
-            flags: MessageFlags.Ephemeral
-        });
-        return;
-    }
+    const replyString = `${bottle.hush === 'Y' ? 'someone' : bottle.author} bottle.message.replace(/"/g, '\\"')}`.replace(/,/g, '", "')
 
-    const newBottle = {
-        ...bottletemplate,
-        message: interaction.fields.getTextInputValue('reply'),
-        author: interaction.user.tag,
-        authorID: interaction.user.id,
-        hush:  'N',
-        reply: [beach.cache[oldbottleID].hush === 'Y' ? 'someone' : beach.cache[oldbottleID].author, beach.cache[oldbottleID].message],
-        date: Math.floor(Date.now() / 1000)
-    }
-
-    beach.bottles.push(newBottle);
+    await sqlConn.query(`
+        INSERT INTO ${process.env.sql_beachtable} (message, author, authorID, hush, replyA, reply, date) 
+        VALUES (\"${interaction.fields.getTextInputValue('reply').replace(/"/g, '\\"')}\", \"${interaction.user.tag}\", \"${interaction.user.id}\", 0, \"${bottle.hush === 'Y' ? 'someone' : bottle.author}\", \"${bottle.message.replace(/"/g, '\\"')}\", \"${Math.floor(Date.now() / 1000)}\");
+    `);
+	
+	sqlConn.release();
     
-    fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
     await increment(interaction.user.id, "bottles_thrown", 1, 1);
     const logC = await client.channels.fetch(process.env.bottle_log) as TextChannel;
-    await logC.send(JSON.stringify(newBottle, null, 2));
+    await logC.send(`(\"${interaction.fields.getTextInputValue('reply').replace(/"/g, '\\"')}\", \"${interaction.user.tag}\", \"${interaction.user.id}\", 0, \"[${replyString}]\", \"${Math.floor(Date.now() / 1000)}\")`);
+
     await interaction.followUp({
-        content: "you toss the bottle into the sea... (again)",
+        content: "you toss the bottle (back) into the sea...",
         flags: MessageFlags.Ephemeral
     });
 }
 
-export async function like(bottle: number, client: Client, interaction:ButtonInteraction) {
+export async function like(bID: number, client: Client, interaction:ButtonInteraction) {
     await interaction.deferReply({flags:MessageFlags.Ephemeral});
 
-    if (beach.cache[bottle].date + parseInt(process.env.cache_window) < now()) delete beach.cache[bottle];
+    const now_ = now();
+    const sqlConn = await pool.getConnection();
 
-    if (!beach.cache[bottle]) {
+    await sqlConn.query(`DELETE FROM cache WHERE time < ${now_ - Number(process.env.cache_window)};`);
+    const cache = await sqlConn.query(`SELECT * FROM cache;`);
+
+
+    let bottle;
+    for (var temp of cache) { if (temp.bID == bID) { bottle = temp; break; } }
+
+    if (!bottle) {
         await interaction.reply({
             content: 'sorry, this bottle is either too old or doesn\'t exist',
             flags: MessageFlags.Ephemeral
@@ -74,48 +81,44 @@ export async function like(bottle: number, client: Client, interaction:ButtonInt
         return;
     }
 
-    if (beach.cache[bottle].likes.includes(interaction.user.id)) {
-        await interaction.followUp({
-            content: 'you already liked this bottle',
-            flags: MessageFlags.Ephemeral
-        });
+    const likes: string[] = JSON.parse(`{"likes": [${bottle.likes}]}`).likes;
+
+    if (likes.includes(interaction.user.id)) {
+        await interaction.followUp( 'you already liked this bottle' );
         return;
     }
 
-    beach.cache[bottle].likes.push(interaction.user.id);
-    fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
+    likes.push(interaction.user.id);
 
-    const likeCount = beach.cache[bottle].likes.length;
+    await sqlConn.query(`UPDATE cache SET likes=\"[${likes}]\" WHERE bID=${bID};`);
+
+    const likeCount = likes.length;
     await interaction.message.edit({content: `\n<:like:1430633436355498014> **${likeCount}** ${likeCount === 1 ? 'like' : 'likes'}`});
 
 
-    const thrower = beach.cache[bottle].authorID;
-    if (thrower) {
-        try {
-            await increment(thrower, "bottle_likes", 1, 1);
-            await interaction.followUp({
-                content: 'liked!',
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        } catch (err) {
-            console.error('error incrementing likes: ', err);
-            await interaction.followUp({
-                content: 'stats error, but liked!',
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-    } else {
+    const thrower = bottle.authorID;
+
+    try {
+        await increment(thrower, "bottle_likes", 1, 1);
         await interaction.followUp({
-            content: 'liked! (but couldn\'t find the thrower to give them their like, rip)',
+            content: 'liked!',
             flags: MessageFlags.Ephemeral
         });
+        await sqlConn.release();
+        return;
+    } catch (err) {
+        console.error('error incrementing likes: ', err);
+        await interaction.followUp({
+            content: 'stats error, but liked!',
+            flags: MessageFlags.Ephemeral
+        });
+        await sqlConn.release();
         return;
     }
+    
 }
 
-export async function report(bottle: number, client: Client, interaction: ButtonInteraction) {
+export async function report(bID: number, client: Client, interaction: ButtonInteraction) {
     if (!interaction.memberPermissions?.has("ManageMessages")) {
         await interaction.reply({
             content: 'sorry, but only mods can do this due to abuse - better fix is in the works',
@@ -123,16 +126,25 @@ export async function report(bottle: number, client: Client, interaction: Button
         });
         return;
     }
-    if (!bottle || !beach.cache[bottle]) {
+    const now_ = now();
+    const sqlConn = await pool.getConnection();
+
+    await sqlConn.query(`DELETE FROM cache WHERE time < ${now_ - Number(process.env.cache_window)};`);
+    const cache = await sqlConn.query(`SELECT * FROM cache WHERE (bID = ${bID}) LIMIT 1;`);
+
+    if (!cache || cache.length == 0) {
         await interaction.reply({
-            content: 'invalid bottle ID',
+            content: 'either it\'s too old or something\'s REALLY wrong',
             flags: MessageFlags.Ephemeral
         });
+        await sqlConn.release();
         return;
     }
-    const rBottle = beach.cache[bottle];
+
+    let bottle = cache[0];
+
     const bottleban = new ButtonBuilder()
-        .setCustomId(`ban-${bottle}`)
+        .setCustomId(`ban-${bottle.authorID}`)
         .setLabel('ban from beach')
         .setStyle(ButtonStyle.Primary)
     const reportban = new ButtonBuilder()
@@ -140,14 +152,14 @@ export async function report(bottle: number, client: Client, interaction: Button
         .setLabel('ban reporter from reporting')
         .setStyle(ButtonStyle.Secondary)
     const blacklist = new ButtonBuilder()
-        .setCustomId(`blacklist-${bottle}`)
+        .setCustomId(`blacklist-${bottle.authorID}`)
         .setLabel('blacklist user')
         .setStyle(ButtonStyle.Danger)
     const beachRow = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(bottleban, reportban, blacklist)
     const logC = await client.channels.fetch(process.env.mod_log) as TextChannel;
     await logC.send({
-        content: `## reported by ${interaction.user.tag} (${interaction.user.id}):\n`+JSON.stringify(rBottle, null, 2),
+        content: `## reported by ${interaction.user.tag} (${interaction.user.id}):\n`+JSON.stringify(bottle, null, 2),
         components: [beachRow]
     });
     await interaction.message.edit({
@@ -165,7 +177,7 @@ export async function execute(
     interaction: ChatInputCommandInteraction
 ) {
     if (Math.floor(Math.random() * 150) == 0) {
-        interaction.reply({
+        await interaction.reply({
             embeds: [new EmbedBuilder({
                 title: 'picked up a crab!',
                 description: 'ouch',
@@ -176,16 +188,16 @@ export async function execute(
     }
 
     await interaction.deferReply();
-
     
     const now_ = now();
-    const cooldown = beach.cooldowns;
+	const sqlConn = await pool.getConnection();
+    const cooldown = await sqlConn.query(`SELECT * FROM cooldowns ORDER BY time DESC;`);
     let factor = 0;
     let cooldownTime = 0;
     for (const entry of cooldown) {
-        if (entry[0] === interaction.user.id) {
+        if (entry.uID === interaction.user.id) {
             factor += 1;
-            cooldownTime = Math.max(cooldownTime, entry[1]);
+            cooldownTime = Math.max(cooldownTime, parseInt(entry.time));
         }
     }
     if (cooldownTime !== 0) {
@@ -198,60 +210,47 @@ export async function execute(
             return;
         }
     }
-    cooldown.push([interaction.user.id, now_]);
-    cooldown.splice(0, cooldown.length - Number(process.env.max_cd_entries));
-    
-    const bottles = beach.bottles;
-    const cache = beach.cache;
-    
-    for (const id in cache) if (cache[id].date + Number(process.env.cache_window) < now_) delete cache[id];
+    await sqlConn.query(`INSERT INTO cooldowns (uID, time) VALUES (\"${interaction.user.id}\", ${now_});`);
+    await sqlConn.query(`DELETE FROM cooldowns ORDER BY time ASC LIMIT 1;`);
 
+    const bottles: { 
+        author: string, 
+        authorID: string, 
+        message: string, 
+        hush: boolean, 
+        reply: string | null, replyA: string | null, 
+        date: string
+    }[] = await sqlConn.query(`SELECT * FROM beach WHERE (author != "${interaction.user.tag}") ORDER BY RAND() LIMIT 1;`);
+    
     if (bottles.length === 0) {
-        await interaction.reply("you're unlucky this time... maybe throw a bottle in the sea with /beachadd and try again later?");
-        return;
-    }
-
-    let bottle: { author: string, authorID: number, message: string, date: string, reply: [string, string] | null, hush: string };
-    const iIndex = Math.floor(Math.random() * bottles.length);
-    for (let i = 0; i < bottles.length; i++) {
-          bottle = bottles[(i + iIndex) % bottles.length];
-          if (bottle.author != interaction.user.tag) break;
-          else bottle = null;
-    }
-    
-    if (!bottle) {
         await interaction.followUp("either there aren't any bottles here or all of them were thrown by you - try again later or ask someone else to /beachadd");
         return;
-    }
+    } 
+    
+    const bottle = bottles[0];
 
-    const bID = beach.bottleID;
-    beach.bottleID += 1;
+    const bID = raw.bottleID;
+    raw.bottleID += 1;
+    fs.writeFileSync(config, JSON.stringify(raw, null, 2));
 
-    bottles.splice(bottles.indexOf(bottle), 1);
-
+    await sqlConn.query(`DELETE FROM cache WHERE time < ${now_ - Number(process.env.cache_window)}`);
 
     bottle.message = bottle.message.replace(/{name}/g, interaction.guild ? (interaction.member as GuildMember).nickname : interaction.user.displayName)
-                                   .replace(/{time}/g, `<t:${now_}:t>`)
-                                   .replace(/{date}/g, `<t:${now_}:D>`)
+                                   .replace(/{time}/g, `<t:${now}:t>`)
+                                   .replace(/{date}/g, `<t:${now}:D>`)
                                    .replace(/{ping}/g, `<@${interaction.user.id}>`);
 
     const place = Math.floor(Math.random() * 100) < 5 ? 'fish tank' : 'beach';
     const item = Math.floor(Math.random() * 100) < 2.5 ? 'fortune cookie' : 'bottle';
-    const header = Math.floor(Math.random() * 100) < 1 ? (bottle.hush !== 'Y' ? bottle.author : 'some guy') + ` just walked up to you and handed you this ${item} idk` : `picked up a ${item}!${bottle.hush !== 'Y' ? ` (from ${bottle.author})` : '' }`;
+    const header = Math.floor(Math.random() * 100) < 1 ? (!bottle.hush ? bottle.author : 'some guy') + ` just walked up to you and handed you this ${item} idk` : `picked up a ${item}!${!bottle.hush ? ` (from ${bottle.author})` : '' }`;
     
-    cache[bID] = {
-        author: bottle.author,
-        authorID: bottle.authorID,
-        hush: bottle.hush,
-        message: bottle.message,
-        reply: bottle.reply,
-        likes: [],
-        date: now_
-    }
+    if (bottle.reply) await sqlConn.query(`INSERT INTO cache (bID, author, authorID, message, hush, reply, replyA, time) VALUES (${bID}, \"${bottle.author}\", \"${bottle.authorID}\", \"${bottle.message.replace(/"/g, '\\"').replace(/\n/g, '\\\\n')}\", ${bottle.hush}, \"${bottle.reply}\", \"${bottle.replyA}\", ${now_})`);
+    else              await sqlConn.query(`INSERT INTO cache (bID, author, authorID, message, hush, time) VALUES (${bID}, \"${bottle.author}\", \"${bottle.authorID}\", \"${bottle.message.replace(/"/g, '\\"').replace(/\n/g, '\\\\n')}\", ${bottle.hush}, ${now_})`);
+    await sqlConn.query(`DELETE FROM beach WHERE message=\"${bottle.message.replace(/"/g, '\\"')}\";`);
+    await sqlConn.release();
 
     const time = bottle.date;
 
-    fs.writeFileSync(beachPath, JSON.stringify(beach, null, 2));
 
     const reportB = new ButtonBuilder()
         .setCustomId(`beachReport-${bID}`)
@@ -276,15 +275,9 @@ export async function execute(
     const embed = new EmbedBuilder()
         .setTitle(header)
         .setDescription(bottle.message + "\n\n-# left on: <t:" + time + ':s>')
-        .setFooter({ text: `ID: ${bID + (bID % 100 == 0 ? ' 🎉' : '')} | ${bottles.length} bottles on the ${place}` });
+        .setFooter({ text: `ID: ${bID + (bID % 100 == 0 ? ' 🎉' : '')} | ${bottles.length - 1} bottles on the ${place}` });
 
-    let replyEmbed = null
-    
-    if (bottle.reply) {
-        replyEmbed = new EmbedBuilder()
-            .setTitle(`(reply to a bottle by ${bottle.reply[0]})`)
-            .setDescription(bottle.reply[1])
-    }
+    let replyEmbed = bottle.reply ? new EmbedBuilder().setTitle(`(reply to a bottle by ${bottle.hush ? bottle.replyA : 'someone'})`).setDescription(bottle.reply) : null;
 
     await interaction.followUp({ components: [beachRow], embeds: (replyEmbed ? [embed, replyEmbed] : [embed]) });
 };

@@ -140,43 +140,38 @@ export async function c4turn(
         content: `<@${vals[turn%2+2]}> dropped a piece in column ${column}!\n<@${vals[turn%2?2:3]}> it's your turn!`
         });
     } else {
-            const board = orig.embeds[0].description?.split("\n").map(r => Array.from(r)) ?? [];
-            const newBoard = await boardplace(board, column-1, turn%2);
-            const win: string = await windetect(board);
-            if (newBoard === 'full') {
-                    await interaction.reply({
-                            content: "column full!!!!!!!!!!!!!!!!!!!!!!",
-
-                            flags: MessageFlags.Ephemeral
-                    });
-                    return;
-            } else if (win !== '') {
-                    await orig.edit({
-                            components: [],
-                            embeds: [{ description: newBoard }],
-                            content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and won the game!`
-                    });
-                    await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3]);
-            } else if (await windetect(board) === 'draw') {
-                    await orig.edit({
-                            components: [],
-                            embeds: [{ description: newBoard }],
-                            content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and the game is a draw!`
-                    });
-                    await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3], 1);
-            } else {
-                    await orig.edit({
-                        allowedMentions: {users: [pingId]},
-                        components: [await connect4menu(turn + 1, challengerId, targetId)],
+        const board = orig.embeds[0].description?.split("\n").map(r => Array.from(r)) ?? [];
+        const newBoard = await boardplace(board, column-1, turn%2);
+        const win: string = await windetect(board);
+        if (newBoard === 'full') {
+            await interaction.reply({
+                content: "column full!!!!!!!!!!!!!!!!!!!!!!",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        } else if (win === 'draw') {
+                await orig.edit({
+                        components: [],
                         embeds: [{ description: newBoard }],
-                        content: `<@${vals[turn%2+2]}> dropped a piece in column ${column}!\n<@${vals[turn%2?2:3]}> it's your turn!`
-                    });
-            }
+                        content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and the game is a draw!`
+                });
+                await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3], 1);
+        } else if (win !== '') {
+                await orig.edit({
+                        components: [],
+                        embeds: [{ description: newBoard }],
+                        content: `<@${vals[turn%2+2]}> dropped a piece in column ${column} and won the game!`
+                });
+                await ruthbaderginsburg('connect4', vals[turn%2+2], vals[turn%2?2:3]);
+        } else {
+                await orig.edit({
+                    allowedMentions: {users: [pingId]},
+                    components: [await connect4menu(turn + 1, challengerId, targetId)],
+                    embeds: [{ description: newBoard }],
+                    content: `<@${vals[turn%2+2]}> dropped a piece in column ${column}!\n<@${vals[turn%2?2:3]}> it's your turn!`
+                });
+        }
     }
-    await interaction.reply({
-            content: `it worked ? column ${column} turn ${turn}`,
-            flags: MessageFlags.Ephemeral
-    });
 }
 
 export const data = new SlashCommandBuilder()

@@ -107,6 +107,6 @@
     "skipLibCheck": true
   },
 
-  "include": ["src/**/*.ts", "servers.ts"],
+  "include": ["src/**/*.ts", "jsons/servers.ts"],
   "exclude": ["node_modules"]
 }

@@ -2,5 +2,6 @@
     "blacklist": {
         "users": [],
         "guilds": []
-    }
+    },
+    "bottleID": 1
 }
