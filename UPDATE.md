@@ -6,7 +6,7 @@ changed:
 - readme is more readable
 - made /dmme easier to use
 - the bot now knows when it can't respond to pings
-- connect4's file is now called connecy4
+- connect4's file is now called connect4
 - fixed the mod buttons on reported bottles working in a really backwards way
 removed:
 - axed reply window, everywhere uses cache window
